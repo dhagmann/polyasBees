@@ -7,17 +7,17 @@ simType = "discovery"
 
 if simType == "discovery":
     globalBalls = ((0, 0),)
-    globalIncrease = (((2,),(1,),),)
+    globalIncrease = (((2,),(1,),),((100,),(1,),))
     probPop = [0, 0.1, 0.5, 1]
-    discoveryRate = [0.5,]
-    discoveryRateOptimal = [0.1,]
+    discoveryRate = [0.5,0.75]
+    discoveryRateOptimal = [0.1,0.75]
     recruitmentRate = [0.5]
 
-outputFile = simType + "3.csv"
+outputFile = simType + "discoveryFebruary2014.csv"
 
 numAttributes = len(globalIncrease[0][0])
 def main():
-    T = [x for x in range(5,76,1)]
+    T = [x for x in range(5,300,1)]
     L = list(itertools.product(probPop, T, globalBalls, globalIncrease, discoveryRate, discoveryRateOptimal, recruitmentRate))
     results = Parallel(n_jobs=-1, verbose=500000, pre_dispatch='all')(delayed(iteration)(cross, repetitions) for cross in L)    
     
@@ -85,20 +85,18 @@ def playGame(balls, T, increase, probPop, discoveryRate, discoveryRateOptimal, r
     time = 0
     count = 0
     while max(balls) < T:
-        chooseAction = uniform(0, probPop + discoveryRate + recruitmentRate)
-        if chooseAction < probPop:
-            if sum(balls) != 0:
-                balls = popBalls(balls)
-        elif chooseAction < probPop + discoveryRate:
-            if uniform(0,1) < discoveryRateOptimal:
+        chooseAction = uniform(0, discoveryRate + sum(balls)*(probPop + recruitmentRate))
+        if chooseAction <= discoveryRate:
+            if uniform(0,1) <= discoveryRateOptimal:
                 balls[0] += 1
             else:
-                balls[1] += 1
-        elif chooseAction <= probPop + discoveryRate + recruitmentRate:
+                balls[1] += 1         
+        elif chooseAction <= discoveryRate + sum(balls)*(probPop):
+            if sum(balls) != 0:
+                balls = popBalls(balls)
+        elif chooseAction <= discoveryRate + sum(balls)*(probPop + recruitmentRate):
             if sum(balls) != 0:
                 balls = drawBalls(balls, increase)
-        else:
-            print("ERROR! No Action Chosen!")
         time += incrementTime(balls, discoveryRate, recruitmentRate, probPop)
         count += 1
         if count >= 100000:
