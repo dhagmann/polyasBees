@@ -1,36 +1,44 @@
+# This code runs the simulations for the paper 
+# "Polya's Bees: A Model of Decentralized Decision Making" 
+# Golman, Hagmann, Miller (This version: September 30, 2014)
+
+# Launch the simulation from the command prompt with
+# one of the following arguments, not including the
+# text in square brackets
+
+# numOptions [Figures 1 & 2]
+# optimalPayoff [Figure 3]
+# suboptimalPayoff [Figure 3]
+# noise [Figure 4]
+# variance [Figure 5]
+# discovery [Figure 6]
+# risk [Appendix]
+
 from random import random, randint, uniform
 from joblib import Parallel, delayed
 import itertools, win32api, win32process, win32con
-import csv, time
-import lockfile
+import csv, time, lockfile, sys
+
+simType = sys.argv[1]
 
 repetitions = 100000
-simType = "variance"
-
-if simType == "newNoise":
-    globalBalls = ((1, 1,1),)
-    globalIncrease = (((3, 2, 2, 1),(2, 1, 1, 0),(2, 1, 1, 0)), ((2, 2, 2, 2),(1, 1, 1, 1), (1, 1, 1, 1)))
-    disruptionRate = [0,]
-    discoveryRate = [0,]
-    discoveryRateOptimal = [0,]
-    recruitmentRate = [1,]
-if simType == "newMultiAttributesDirectComparison":
-    globalBalls = ((1, 1),)
-    globalIncrease = (((4, 0), (2, 2)),)
-    disruptionRate = [0,]
-    discoveryRate = [0,]
-    discoveryRateOptimal = [0,]
-    recruitmentRate = [1,]
-if simType == "numTypes":
-    globalBalls = ((1, 1), (1, 1, 1), (1, 1, 1, 1))
+if simType == "numOptions":
+    globalBalls = ((1, 1), (1, 1, 1, 1))
     globalIncrease = (((2,), (1,), (1,), (1,)),)
     disruptionRate = [0,]
     discoveryRate = [0,]
     discoveryRateOptimal = [0,]
     recruitmentRate = [1,]
-if simType == "ratios":
-    globalBalls = ((1, 1, 1),)
-    globalIncrease = (((3,), (1,), (1,)), ((3,), (2,), (1,)))
+if simType == "optimalPayoff":
+    globalBalls = ((1, 1),)
+    globalIncrease = (((2,), (1,)), ((3,), (1,)), ((4,), (1,)))
+    disruptionRate = [0,]
+    discoveryRate = [0,]
+    discoveryRateOptimal = [0,]
+    recruitmentRate = [1,]
+if simType == "suboptimalPayoff":
+    globalBalls = ((1, 1),)
+    globalIncrease = (((4,), (1,)), ((4,), (2,)), ((4,), (3,)))
     disruptionRate = [0,]
     discoveryRate = [0,]
     discoveryRateOptimal = [0,]
@@ -42,37 +50,9 @@ if simType == "noise":
     discoveryRate = [0,]
     discoveryRateOptimal = [0,]
     recruitmentRate = [1,]
-if simType == "multiAttributes":
-    globalBalls = ((1, 1),)
-    globalIncrease = (((3, 1), (1, 1)),((2, 2), (1, 1)))
-    disruptionRate = [0,]
-    discoveryRate = [0,]
-    discoveryRateOptimal = [0,]
-    recruitmentRate = [1,]
-if simType == "multiAttributesDirectComparison":
+if simType == "risk":
     globalBalls = ((1, 1),)
     globalIncrease = (((3, 1), (2, 2)),)
-    disruptionRate = [0,]
-    discoveryRate = [0,]
-    discoveryRateOptimal = [0,]
-    recruitmentRate = [1,]
-if simType == "infoCascade":
-    globalBalls = ((1, 3),)
-    globalIncrease = (((2,), (1,)),)
-    disruptionRate = [0, 0.05, 0.10, 0.20]
-    discoveryRate = [0,]
-    discoveryRateOptimal = [0,]
-    recruitmentRate = [1,]
-if simType == "varyingSuboptimalPayoff":
-    globalBalls = ((1, 1),)
-    globalIncrease = (((4,), (1,)), ((4,), (2,)), ((4,), (3,)))
-    disruptionRate = [0,]
-    discoveryRate = [0,]
-    discoveryRateOptimal = [0,]
-    recruitmentRate = [1,]
-if simType == "varyingOptimalPayoff":
-    globalBalls = ((1, 1),)
-    globalIncrease = (((2,), (1,)), ((3,), (1,)), ((4,), (1,)))
     disruptionRate = [0,]
     discoveryRate = [0,]
     discoveryRateOptimal = [0,]
@@ -80,15 +60,16 @@ if simType == "varyingOptimalPayoff":
 if simType == "discovery":
     globalBalls = ((0, 0),)
     globalIncrease = (((2,),(1,),),)
-    disruptionRate = [0, 0.05, 0.25]
-    discoveryRate = [0.25, 0.50, 1.0]
+    disruptionRate = [0, 0.25]
+    discoveryRate = [0.50, 1.0]
     discoveryRateOptimal = [0.5,]
-    recruitmentRate = [0.25, 0.5, 1.0]
+    recruitmentRate = [0.25, 0.5]
 if simType == "variance":
     globalBalls = ((1, 1),)
     # p * HIGH + (1-p)*1 == 2
     # HIGH payoff varies, p is the probability that it is chosen
-    globalIncrease = (((1, 3), (2, 2)),
+    globalIncrease = (((2, 2), (2, 2)),
+                      ((1, 3), (2, 2)),
                       ((1, 1, 4), (2, 2, 2)),
                       ((1, 1, 1, 5), (2, 2, 2, 2)),
                       ((1, 1, 1, 1, 6), (2, 2, 2, 2, 2)),
@@ -109,7 +90,7 @@ def main():
         headers = 'disruptionRate,threshold,numChoices,error,option1,option2,time,noResolution,startingContents,increaseRates,discoveryRate,discoveryRateOptimal,recruitmentRate\n' 
         f.write(headers)
                 
-    T = [x for x in range(2,100,1)] # + [x for x in range(100, 5001, 100)]
+    T = [x for x in range(2,100,1)]
     if simType == "variance":
         T = [100,]
     L = list(itertools.product(disruptionRate, T, globalBalls, globalIncrease, discoveryRate, discoveryRateOptimal, recruitmentRate))
